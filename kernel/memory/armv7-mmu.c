@@ -160,28 +160,62 @@ void invalidate_l1_dcache(void) {
 /* This means we need 14-bit (16k) allignment */
 uint32_t  __attribute__((aligned(16384 * NUM_PAGE_TABLES))) page_table[NUM_PAGE_TABLES][NUM_PAGE_TABLE_ENTRIES];
 uint32_t page_table_id[NUM_PAGE_TABLES];
-uint32_t numProcesses = 0;
+bool page_table_used[NUM_PAGE_TABLES];
 uint32_t* getPageTable(unsigned int pid){
 	int tableid = -1;
 	int i;
-	for(i = 0; i < numProcesses; i++){
-		if(page_table_id == pid){
+	for(i = 0; i < NUM_PAGE_TABLES; i++){
+		if(page_table_used[i] && page_table_id == pid){
 			tableid = i;
 			break;
 		}
 	}
 
 	if(tableid == -1){
-		
+
+		for(i = 0; i < NUM_PAGE_TABLES; i++){
+			if(!page_table_used[i]){
+				tableid = i;
+				break;
+			}
+		}
+
+		if(tableid == -1){
+			printk("ERROR: Max page tables reached!\n");
+			return 0;
+			
+		} else {
+			page_table_id[tableid] = pid;
+			page_table_used[tableid] = true;
+
+			for (i = (kernel_end >> 20); i < mem_end >> 20; i++) {
+				page_table[tableid][i] = i << 20 | SECTION_KERNEL;
+			}
+		}
 	}
 	
 	return tableid;
 }
-uint32_t* freePageTable(unsigned int pid){
+void freePageTable(unsigned int pid){
 
+	int tableid = -1;
+	int i;
+	for(i = 0; i < NUM_PAGE_TABLES; i++){
+		if(page_table_used[i] && page_table_id == pid){
+			tableid = i;
+			break;
+		}
+	}
+
+	if(tableid == -1){
+		printk("ERROR: No table for PID?\n");
+		return;
+	}
+
+	page_table_used[tableid] = false;
 }
 void setPageTableEntry(bool userspace){
-	
+
 }
 
 /* We want a 1MB coarse page table descriptor */
@@ -230,6 +264,10 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 	/* Set up an identity-mapping for all 4GB */
 	/* section-short descriptor 1MB pages */
 
+
+	// Mark the page tables as unused
+	for(i = 0; i < NUM_PAGE_TABLES; i++)
+		page_table_used[i] = false;
 
 	/* Flush TLB */
 	if (mmu_debug) printk("\tInvalidating TLB\n");
