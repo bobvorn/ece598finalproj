@@ -268,10 +268,6 @@ void setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int usersp
 		}
 
 		tlb_invalidate_all();
-		/* Flush l1-icache */
-		icache_invalidate_all();
-		/* Flush l1-dcache */
-		disable_l1_dcache();
 	}
 
 	else {
@@ -282,10 +278,6 @@ void setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int usersp
 		}
 
 		tlb_invalidate_all();
-		/* Flush l1-icache */
-		icache_invalidate_all();
-		/* Flush l1-dcache */
-		disable_l1_dcache();
 	}
 }
 
@@ -374,85 +366,7 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 			page_table[j][i] = i << 20 | SECTION_2GB;
 	}
 
-
-
-	/* TTBCR : Translation Table Base Control Register */
-	/* B3.5.4 (1330) */
-	/* Choice of using TTBR0 (user) vs TTBR1 (kernel) */
-	/* This is based on address range, also TTBCR.N */
-	/* N is bottom 3 bits, if 000 then TTBR1 not used */
-	/* We set N to 0, meaning only use TTBR0 */
-	asm volatile("mrc p15, 0, %0, c2, c0, 2" : "=r" (reg) : : "cc");
-	if (mmu_debug) printk("\tTTBCR before = %x\n",reg);
-	reg=0;
-	asm volatile("mcr p15, 0, %0, c2, c0, 2" : : "r" (reg) : "cc");
-
-	/* See B.4.1.43 */
-	/* DACR: Domain Access Control Register */
-	/* All domains, set manager access (no faults for accesses) */
-	if (mmu_debug) printk("\tInitialize DACR\n");
-	reg=0x55555555;	// all domains, client access
-	asm volatile("mcr p15, 0, %0, c3, c0, 0" : : "r" (reg): "cc");
-
-	/* Initialize SCTLR.AFE */
-	/* This boots with value 0, but set to 0 anyway */
-	if (mmu_debug) printk("\tInitialize SCTLR.AFE\n");
-	asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
-	if (mmu_debug) printk("\tSCTLR before AFE = %x\n",reg);
-	reg&=~SCTLR_ACCESS_FLAG_ENABLE;
-	asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r" (reg) : "cc");
-
-	/* TTBR0 (VMSA): Translation Table Base Register 0 */
-	/* See B.4.1.154 (page 1729) */
-	/* This is the userspace pagetable, can be per-process */
-
-	/* Bits 31-N are the address of the table */
-	/* Low bits are various config options, we leave them at 0 */
-	/* FIXME: might need to do something if SMP support added */
-	if (mmu_debug) {
-		printk("\tSetting page table to %x\n",page_table[0]);
-		printk("\tPTE[0] = %x\n",page_table[0][0]);
-	}
-
-	reg=(uint32_t)page_table[0];
-	reg|=0x6a;		// 0110 1010
-				// IRGN = 10 : inner write-through cache
-				// NOS = 1 : inner sharable
-				// RGN = 01 : normal mem, outer writeback/allocate
-				// S = 1 : sharable
-	asm volatile("mcr p15, 0, %0, c2, c0, 0"
-		: : "r" (reg) : "memory");
-
-#if 0
-	/* SMP is implemented in the CPUECTLR register on armv8? */
-	uint32_t reg2;
-
-	if (mmu_debug) printk("Enabling SMPEN\n");
-	asm volatile("mrrc p15, 1, %0, %1, c15" :  "=r" (reg), "=r"(reg2):: "cc");
-	reg|=(1<<6);	// Set SMPEN.
-	asm volatile("mcrr p15, 1, %0, %1, c15" : : "r" (reg), "r"(reg2):"cc");
-#endif
-
-
-	/* See B.4.1.130 on page 1707 */
-	/* SCTLR, VMSA: System Control Register */
-	/* Enable the MMU by setting the M bit (bit 1) */
-	asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
-	if (mmu_debug) printk("\tSCTLR before = %x\n",reg);
-	reg|=SCTLR_MMU_ENABLE;
-
-/* Enable caches!  Doesn't quite work */
-#if 1
-	reg|=SCTLR_CACHE_ENABLE;
-	reg|=SCTLR_ICACHE_ENABLE;
-#endif
-	asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r" (reg) : "cc");
-
-	asm volatile("dsb");	/* barrier */
-	asm volatile("isb");	/* barrier */
-
-	asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
-	if (mmu_debug) printk("\tSCTLR after = %x\n",reg);
+	switch_table(0);
 }
 
 void enable_l1_dcache(void) {
@@ -639,10 +553,6 @@ void flush_dcache(uint32_t start_addr, uint32_t end_addr) {
 void switch_table(unsigned int pid) {
 
 	tlb_invalidate_all();
-	/* Flush l1-icache */
-	icache_invalidate_all();
-	/* Flush l1-dcache */
-	disable_l1_dcache();
 
 	uint32_t reg=0;
 

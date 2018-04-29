@@ -145,7 +145,7 @@ void __attribute__((interrupt("ABORT"))) data_abort_handler(void) {
 	if (fs==2) printk("\tDebug event\n");
 	if ((fs&0xd)==0xd) printk("\tPermission fault accessing %x\n",dfar);
 
-	printk("Process currently running is %d\n", current_process->pid);
+	printk("Process currently running is %d trying to access %d\n", current_process->pid, dfar >> 20);
 
 	chunk = dfar/4096;
 	bit = chunk%32;
@@ -173,6 +173,8 @@ void __attribute__((interrupt("ABORT"))) prefetch_abort_handler(void) {
 
 	if (fs==2) printk("\tDebug event\n");
 	if ((fs&0xd)==0xd) printk("\tPermission fault accessing %x\n",ifar);
+
+	printk("Process currently running is %d trying to access %d\n", current_process->pid, ifar >> 20);
 
 	chunk = ifar/4096;
 	bit = chunk%32;
