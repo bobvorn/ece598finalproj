@@ -200,7 +200,7 @@ This is: not-secure, shareable, domain 0, and the rest as described.
 uint32_t  __attribute__((aligned(16384 * NUM_PAGE_TABLES))) page_table[NUM_PAGE_TABLES][NUM_PAGE_TABLE_ENTRIES];
 unsigned int page_table_id[NUM_PAGE_TABLES];
 char page_table_used[NUM_PAGE_TABLES];
-uint32_t* getPageTable(unsigned int pid){
+uint32_t getPageTable(unsigned int pid){
 	int tableid = -1;
 	int i;
 	for(i = 0; i < NUM_PAGE_TABLES; i++){
@@ -233,7 +233,7 @@ uint32_t* getPageTable(unsigned int pid){
 		}
 	}
 
-	return page_table[tableid];
+	return tableid;
 }
 void freePageTable(unsigned int pid){
 
@@ -254,7 +254,7 @@ void freePageTable(unsigned int pid){
 	page_table_used[tableid] = 0;
 }
 
-setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int userspace) {
+void setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int userspace) {
 	uint32_t	i;
 	uint32_t id = getPageTable(pid);
 	uint32_t pages = numBytes/CHUNK_SIZE;
@@ -264,16 +264,20 @@ setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int userspace) 
 
 		for (i = (address >> 20); i <(address >> 20) + 1 + pages; i++) {
 			page_table[id][i] = i << 20 | SECTION_USER;
+			printk("Process %d allocated block %d of table %d\n",pid,i,id);
 		}
 
+		switch_table(pid);
 	}
 
 	else {
 
 		for (i = (address >> 20); i <(address >> 20) + 1 + pages; i++) {
 			page_table[id][i] = i << 20 | SECTION_KERNEL;
+			printk("Process %d allocated kernel block %d of table %d\n",pid,i,id);
 		}
 
+		switch_table(pid);
 	}
 }
 
@@ -625,6 +629,8 @@ void flush_dcache(uint32_t start_addr, uint32_t end_addr) {
 }
 
 void switch_table(unsigned int pid) {
+
+	printk("Switching tables to table of pid: %d\n",pid);
 
 	tlb_invalidate_all();
 	/* Flush l1-icache */

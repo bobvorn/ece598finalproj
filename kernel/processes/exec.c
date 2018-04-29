@@ -23,6 +23,9 @@ static int exec_summary_debug=1;
 
 int32_t execve(const char *filename, char *const argv[], char *const envp[]) {
 
+	// Switch the TLB
+	switch_table(current_process->pid);
+
 	int result,i;
 	int32_t inode;
 	struct stat stat_info;
@@ -109,6 +112,7 @@ int32_t execve(const char *filename, char *const argv[], char *const envp[]) {
 		size=stat_info.st_size;
 		if (exec_debug) printk("RAW: total size = %d\n",size);
 	}
+
 
 
 	/* Allocate stack */
