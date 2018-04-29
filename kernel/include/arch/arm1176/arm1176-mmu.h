@@ -6,3 +6,4 @@ void disable_l1_icache(void);
 void enable_branch_predictor(void);
 void disable_branch_predictor(void);
 void switch_table(unsigned int pid);
+void freePageTable(unsigned int pid);

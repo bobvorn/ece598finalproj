@@ -20,6 +20,8 @@ void exit(int32_t status) {
         current_process->status=PROCESS_STATUS_EXITED;
 	current_process->exit_value=status;
 
+	freePageTable(current_process->pid);
+
 	/* Free resources now? No wait until waitpid() */
 	/* process_destroy(current_process); */
 
