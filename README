@@ -1,0 +1,13 @@
+ECE598 Advanced Operating Systems
+Spring 2018
+HW9
+
+Name: Avery Rossow
+
+Answers to Questions:
+
+a) The aligned(16) forces the structure to be 16 bytes long. This is to increase cache speeds as the structure fits within one cache line.
+
+b) The console needs to update the display every time. To increase the speed, moving the display upates to another thread would remove this disparity.
+
+
