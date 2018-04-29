@@ -7,3 +7,5 @@ void *memory_allocate(uint32_t size);
 int32_t memory_free(void *location, uint32_t size);
 int32_t memory_total_free(void);
 uint32_t memory_get_total(void);
+
+extern uint8_t pid_memory_map[((1024*1024*1024)/4096)];

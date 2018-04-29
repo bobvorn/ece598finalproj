@@ -4,6 +4,7 @@
 
 #include "memory/memory.h"
 #include "memory/mmu-common.h"
+#include "processes/process.h"
 
 #include "lib/printk.h"
 #include "lib/memset.h"
@@ -16,8 +17,10 @@ static int memory_debug=0;
 static unsigned int memory_total;
 
 static unsigned int memory_map[MAX_MEMORY/CHUNK_SIZE/32];
+uint8_t pid_memory_map[((1024*1024*1024)/4096)];
 
 static unsigned int max_chunk=0;
+static unsigned int pid;
 
 /* Mark a chunk as used (1) */
 static int memory_mark_used(int chunk) {
@@ -28,6 +31,7 @@ static int memory_mark_used(int chunk) {
 	bit=chunk%32;
 
 	memory_map[element]|=1<<bit;
+	pid_memory_map[(chunk + bit)] = pid;
 
 	return 0;
 }
@@ -91,7 +95,7 @@ static int memory_init(unsigned long memory_total,unsigned long memory_kernel) {
 static int find_free(int num_chunks) {
 
 	int i,j;
-
+	pid = current_process->pid;
 	for(i=0;i<max_chunk;i++) {
 		if (!memory_test_used(i)) {
 			for(j=0;j<num_chunks;j++) {

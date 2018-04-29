@@ -1,3 +1,4 @@
+
 /* Prints B for 5s */
 /* Half of the traditional duo used to show multi-tasking is working */
 
@@ -6,30 +7,35 @@
 #include "syscalls.h"
 #include "vlibc.h"
 
-#define RUNTIME	5
+#define RUNTIME 5
 
 int main(int argc, char **argv) {
 
-	
-	char* num = argv[1];
-	int number = 0;
-	int len = strlen(num);
-	int i;
-	for(i = 0; i < len; i++){
-		int offset = ((len - i - 1) * 10);
-		if(offset > 0)
-			number += offset * num[i];
-		else
-			number += num[i];
-	}
+    int start_time,current_time;
+    struct tms buf;
 
-	printf("Printb: %d %s", number, argv[2]);
+    start_time=time(NULL);
 
-	(*((char**)number)) = argv[2];
+		/*
+    while(1) {
+        printf("B");
+        asm volatile(
+            "mov r1,#65536\n"
+            "a_loop:\n"
+            "subs   r1,r1,#1\n"
+            "bne    a_loop\n"
+            :::);
+        current_time=time(NULL);
+        if (current_time-start_time>RUNTIME) break;
+    }
+		*/
 
-	while(1){
-		sleep(1);
-	}
+    times(&buf);
 
-	return 0;
+    printf("\nTime running B: "
+        "Wallclock: %d seconds, User: %d seconds, Running %d%% of time\n",
+        current_time-start_time,buf.tms_utime/64,
+        (buf.tms_utime/64)*100U/(current_time-start_time));
+
+    return 0;
 }

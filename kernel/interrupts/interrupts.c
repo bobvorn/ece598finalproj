@@ -11,6 +11,9 @@
 #include "time/time.h"
 #include "processes/scheduler.h"
 #include "processes/exit.h"
+#include "processes/process.h"
+#include "memory/memory.h"
+
 
 
 #define MAX_IRQ	64
@@ -98,7 +101,7 @@ void interrupt_handler_c(void) {
 	}
 	else {
 		if (!handled) {
-			printk("Unknown interrupt happened %x!\n",basic_pending);
+			//printk("Unknown interrupt happened %x!\n",basic_pending);
 		}
 		return;
 	}
@@ -125,7 +128,7 @@ void __attribute__((interrupt("FIQ"))) fiq_handler(void) {
 
 /* 1415 */
 void __attribute__((interrupt("ABORT"))) data_abort_handler(void) {
-	uint32_t dfsr,dfar,fs;
+	uint32_t dfsr,dfar,fs, chunk, bit;
 	register long lr asm ("lr");
 
 	printk("MEMORY ABORT at PC=%x\n",lr-8);
@@ -142,13 +145,20 @@ void __attribute__((interrupt("ABORT"))) data_abort_handler(void) {
 	if (fs==2) printk("\tDebug event\n");
 	if ((fs&0xd)==0xd) printk("\tPermission fault accessing %x\n",dfar);
 
+	printk("Process currently running is %d\n", current_process->pid);
+
+	chunk = dfar/4096;
+	bit = chunk%32;
+	chunk = chunk + bit;
+	printk("Memory is owned by %d\n", pid_memory_map[chunk]);
+
 	exit(-1);
 
 }
 
 /* 1637 */
 void __attribute__((interrupt("ABORT"))) prefetch_abort_handler(void) {
-	uint32_t ifsr,ifar,fs;
+	uint32_t ifsr,ifar,fs, chunk, bit;
 	register long lr asm ("lr");
 
 	printk("PREFETCH ABORT at PC=%x\n",lr-4);
@@ -164,7 +174,13 @@ void __attribute__((interrupt("ABORT"))) prefetch_abort_handler(void) {
 	if (fs==2) printk("\tDebug event\n");
 	if ((fs&0xd)==0xd) printk("\tPermission fault accessing %x\n",ifar);
 
-	exit(-1);
+	chunk = ifar/4096;
+	bit = chunk%32;
+	chunk = chunk + bit;
+	printk("Memory is owned by %d\n", pid_memory_map[chunk]);
+
+	//asm volatile("mrc p15, 0, %0, c6, c0, 2" : "=r" (ifar) : : "cc");
+	//exit(-1);
 
 }
 
@@ -181,4 +197,3 @@ void __attribute__((interrupt("UNDEF"))) undef_handler(void) {
 	printk("UNDEFINED INSTRUCTION, PC=%x, insn=%x\n",lr-4,*ptr);
 
 }
-

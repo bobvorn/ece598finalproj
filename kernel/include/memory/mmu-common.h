@@ -8,3 +8,4 @@ void disable_branch_predictor(void);
 
 void flush_icache(void);
 void flush_dcache(uint32_t start_addr, uint32_t end_addr);
+void switch_table(void);

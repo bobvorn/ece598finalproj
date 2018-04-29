@@ -30,6 +30,8 @@
 
 #include "memory/memory.h"
 
+#include "memory/mmu-common.h"
+
 extern int blinking_enabled;
 
 /* Note!  Do not call a SWI from supervisor mode */
@@ -205,6 +207,9 @@ uint32_t swi_handler_c(
 
 		case SYSCALL_GRADIENT:
 			result=framebuffer_gradient();
+			 switch_table();
+			 printk("PIECE OF SHIT\n");
+
 			break;
 
 		case SYSCALL_FRAMEBUFFER_LOAD:
@@ -234,4 +239,3 @@ uint32_t swi_handler_c(
 	return result;
 
 }
-
