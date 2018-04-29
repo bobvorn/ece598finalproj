@@ -16,6 +16,8 @@
 #include "lib/printk.h"
 #include "arch/armv7/armv7-mmu.h"
 
+uint32_t g_mem_end, g_kernel_end;
+
 static int mmu_debug=1;
 
 static void tlb_invalidate_all(void) {
@@ -147,77 +149,6 @@ void invalidate_l1_dcache(void) {
 /* This can be configured to round-robin in the control register (bit 14) */
 
 
-
-/* We want to cover all 4GB of address space	*/
-/* Using 1MB pages, so need 4096 entries	*/
-#define NUM_PAGE_TABLE_ENTRIES 4096
-
-// There must be a maximum number of programs because we don't dynamically allocate page tables
-// One table per process, switched when switching programs
-#define NUM_PAGE_TABLES 16
-
-/* make sure properly aligned, as the low bits are reserved  */
-/* This means we need 14-bit (16k) allignment */
-uint32_t  __attribute__((aligned(16384 * NUM_PAGE_TABLES))) page_table[NUM_PAGE_TABLES][NUM_PAGE_TABLE_ENTRIES];
-uint32_t page_table_id[NUM_PAGE_TABLES];
-bool page_table_used[NUM_PAGE_TABLES];
-uint32_t* getPageTable(unsigned int pid){
-	int tableid = -1;
-	int i;
-	for(i = 0; i < NUM_PAGE_TABLES; i++){
-		if(page_table_used[i] && page_table_id == pid){
-			tableid = i;
-			break;
-		}
-	}
-
-	if(tableid == -1){
-
-		for(i = 0; i < NUM_PAGE_TABLES; i++){
-			if(!page_table_used[i]){
-				tableid = i;
-				break;
-			}
-		}
-
-		if(tableid == -1){
-			printk("ERROR: Max page tables reached!\n");
-			return 0;
-			
-		} else {
-			page_table_id[tableid] = pid;
-			page_table_used[tableid] = true;
-
-			for (i = (kernel_end >> 20); i < mem_end >> 20; i++) {
-				page_table[tableid][i] = i << 20 | SECTION_KERNEL;
-			}
-		}
-	}
-	
-	return tableid;
-}
-void freePageTable(unsigned int pid){
-
-	int tableid = -1;
-	int i;
-	for(i = 0; i < NUM_PAGE_TABLES; i++){
-		if(page_table_used[i] && page_table_id == pid){
-			tableid = i;
-			break;
-		}
-	}
-
-	if(tableid == -1){
-		printk("ERROR: No table for PID?\n");
-		return;
-	}
-
-	page_table_used[tableid] = false;
-}
-void setPageTableEntry(bool userspace){
-
-}
-
 /* We want a 1MB coarse page table descriptor */
 /* B.3.5.1, p1326 */
 /* All mappings global and executable */
@@ -255,11 +186,83 @@ This is: not-secure, shareable, domain 0, and the rest as described.
 //#define SECTION_FULL_ACCESS_NO_CACHE	0x10c16
 
 
+
+/* We want to cover all 4GB of address space	*/
+/* Using 1MB pages, so need 4096 entries	*/
+#define NUM_PAGE_TABLE_ENTRIES 4096
+
+// There must be a maximum number of programs because we don't dynamically allocate page tables
+// One table per process, switched when switching programs
+#define NUM_PAGE_TABLES 16
+
+/* make sure properly aligned, as the low bits are reserved  */
+/* This means we need 14-bit (16k) allignment */
+uint32_t  __attribute__((aligned(16384 * NUM_PAGE_TABLES))) page_table[NUM_PAGE_TABLES][NUM_PAGE_TABLE_ENTRIES];
+unsigned int page_table_id[NUM_PAGE_TABLES];
+char page_table_used[NUM_PAGE_TABLES];
+uint32_t* getPageTable(unsigned int pid){
+	int tableid = -1;
+	int i;
+	for(i = 0; i < NUM_PAGE_TABLES; i++){
+		if(page_table_used[i] && page_table_id[i] == pid){
+			tableid = i;
+			break;
+		}
+	}
+
+	if(tableid == -1){
+
+		for(i = 0; i < NUM_PAGE_TABLES; i++){
+			if(!page_table_used[i]){
+				tableid = i;
+				break;
+			}
+		}
+
+		if(tableid == -1){
+			printk("ERROR: Max page tables reached!\n");
+			return 0;
+			
+		} else {
+			page_table_id[tableid] = pid;
+			page_table_used[tableid] = 1;
+
+			for (i = (g_kernel_end >> 20); i < g_mem_end >> 20; i++) {
+				page_table[tableid][i] = i << 20 | SECTION_KERNEL;
+			}
+		}
+	}
+	
+	return page_table[tableid];
+}
+void freePageTable(unsigned int pid){
+
+	int tableid = -1;
+	int i;
+	for(i = 0; i < NUM_PAGE_TABLES; i++){
+		if(page_table_used[i] && page_table_id[i] == pid){
+			tableid = i;
+			break;
+		}
+	}
+
+	if(tableid == -1){
+		printk("ERROR: No table for PID?\n");
+		return;
+	}
+
+	page_table_used[tableid] = 0;
+}
+
+
 /* Enable a one-to-one physical to virtual mapping using 1MB pagetables */
 void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 
 	int i,j;
 	uint32_t reg;
+
+	g_mem_end = mem_end;
+	g_kernel_end = kernel_end;
 
 	/* Set up an identity-mapping for all 4GB */
 	/* section-short descriptor 1MB pages */
@@ -267,7 +270,7 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 
 	// Mark the page tables as unused
 	for(i = 0; i < NUM_PAGE_TABLES; i++)
-		page_table_used[i] = false;
+		page_table_used[i] = 0;
 
 	/* Flush TLB */
 	if (mmu_debug) printk("\tInvalidating TLB\n");
@@ -614,7 +617,7 @@ void switch_table(unsigned int pid) {
 	asm volatile("isb");	/* barrier */
 
 
-	reg=(uint32_t)page_table[pid];
+	reg=(uint32_t)getPageTable(pid);
 	reg|=0x6a;		// 0110 1010
 				// IRGN = 10 : inner write-through cache
 				// NOS = 1 : inner sharable
