@@ -158,8 +158,31 @@ void invalidate_l1_dcache(void) {
 
 /* make sure properly aligned, as the low bits are reserved  */
 /* This means we need 14-bit (16k) allignment */
-
 uint32_t  __attribute__((aligned(16384 * NUM_PAGE_TABLES))) page_table[NUM_PAGE_TABLES][NUM_PAGE_TABLE_ENTRIES];
+uint32_t page_table_id[NUM_PAGE_TABLES];
+uint32_t numProcesses = 0;
+uint32_t* getPageTable(unsigned int pid){
+	int tableid = -1;
+	int i;
+	for(i = 0; i < numProcesses; i++){
+		if(page_table_id == pid){
+			tableid = i;
+			break;
+		}
+	}
+
+	if(tableid == -1){
+		
+	}
+	
+	return tableid;
+}
+uint32_t* freePageTable(unsigned int pid){
+
+}
+void setPageTableEntry(bool userspace){
+	
+}
 
 /* We want a 1MB coarse page table descriptor */
 /* B.3.5.1, p1326 */
