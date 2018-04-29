@@ -16,8 +16,6 @@
 #include "lib/printk.h"
 #include "arch/armv7/armv7-mmu.h"
 
-void switch_table(void);
-
 static int mmu_debug=1;
 
 static void tlb_invalidate_all(void) {
@@ -156,7 +154,7 @@ void invalidate_l1_dcache(void) {
 
 // There must be a maximum number of programs because we don't dynamically allocate page tables
 // One table per process, switched when switching programs
-#define NUM_PAGE_TABLES 10
+#define NUM_PAGE_TABLES 16
 
 /* make sure properly aligned, as the low bits are reserved  */
 /* This means we need 14-bit (16k) allignment */
@@ -555,7 +553,7 @@ void switch_table(unsigned int pid) {
 	asm volatile("isb");	/* barrier */
 
 
-	reg=(uint32_t)page_table2[pid];
+	reg=(uint32_t)page_table[pid];
 	reg|=0x6a;		// 0110 1010
 				// IRGN = 10 : inner write-through cache
 				// NOS = 1 : inner sharable
