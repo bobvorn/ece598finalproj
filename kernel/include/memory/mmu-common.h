@@ -10,3 +10,4 @@ void flush_icache(void);
 void flush_dcache(uint32_t start_addr, uint32_t end_addr);
 void switch_table(unsigned int pid);
 void freePageTable(unsigned int pid);
+setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int userspace);

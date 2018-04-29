@@ -184,7 +184,7 @@ This is: not-secure, shareable, domain 0, and the rest as described.
 #define SECTION_DEFAULT	0x90c16		// any-access, non-cached
 
 //#define SECTION_FULL_ACCESS_NO_CACHE	0x10c16
-
+#define CHUNK_SIZE	4096
 
 
 /* We want to cover all 4GB of address space	*/
@@ -222,7 +222,7 @@ uint32_t* getPageTable(unsigned int pid){
 		if(tableid == -1){
 			printk("ERROR: Max page tables reached!\n");
 			return 0;
-			
+
 		} else {
 			page_table_id[tableid] = pid;
 			page_table_used[tableid] = 1;
@@ -232,7 +232,7 @@ uint32_t* getPageTable(unsigned int pid){
 			}
 		}
 	}
-	
+
 	return page_table[tableid];
 }
 void freePageTable(unsigned int pid){
@@ -253,6 +253,30 @@ void freePageTable(unsigned int pid){
 
 	page_table_used[tableid] = 0;
 }
+
+setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int userspace) {
+	uint32_t	i;
+	uint32_t id = getPageTable(pid);
+	uint32_t pages = numBytes/CHUNK_SIZE;
+
+
+	if(userspace) {
+
+		for (i = (address >> 20); i <(address >> 20) + 1 + pages; i++) {
+			page_table[id][i] = i << 20 | SECTION_USER;
+		}
+
+	}
+
+	else {
+
+		for (i = (address >> 20); i <(address >> 20) + 1 + pages; i++) {
+			page_table[id][i] = i << 20 | SECTION_KERNEL;
+		}
+
+	}
+}
+
 
 
 /* Enable a one-to-one physical to virtual mapping using 1MB pagetables */
@@ -294,7 +318,7 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 
 	/* First set some default values for all */
 	for (i = 0; i < NUM_PAGE_TABLE_ENTRIES; i++) {
-		
+
 		for(j = 0; j < NUM_PAGE_TABLES; j++)
 			page_table[j][i] = i << 20 | SECTION_DEFAULT;
 
