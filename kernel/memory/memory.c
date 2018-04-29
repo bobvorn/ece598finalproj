@@ -46,6 +46,8 @@ static int memory_mark_free(int chunk) {
 
 	memory_map[element]&=~(1<<bit);
 
+	pid_memory_map[(chunk + bit)] = -1;
+
 	return 0;
 }
 
@@ -171,6 +173,8 @@ int32_t memory_free(void *location, uint32_t size) {
 	int i;
 	int num_chunks;
 	int first_chunk;
+
+	pid = current_process->pid;
 
 	if (memory_debug ) {
 		int32_t total;
