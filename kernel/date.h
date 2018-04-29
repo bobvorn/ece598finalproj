@@ -1,1 +1,0 @@
-#define COMPILE_DATE "Sun Apr 29 17:00:37 EDT 2018"

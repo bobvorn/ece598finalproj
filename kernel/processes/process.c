@@ -436,6 +436,9 @@ int32_t process_switch(struct process_control_block_type *old,
                 : /* clobbers */
         );
 
+	// Switch the TLB
+	switch_table(current_process->pid);
+
 	return 0;
 }
 
