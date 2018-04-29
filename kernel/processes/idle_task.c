@@ -68,6 +68,10 @@ void create_idle_task(void) {
 	struct process_control_block_type *idle_process;
 
 	idle_process=process_create();
+
+	// Setup TLB
+	switch_table(idle_process->pid);
+
 	idle_process->text=(void *)&idle_task;
 	idle_process->user_state.pc=(long)&idle_task;
 	idle_process->running=1;

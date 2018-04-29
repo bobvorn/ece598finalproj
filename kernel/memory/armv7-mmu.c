@@ -267,7 +267,11 @@ void setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int usersp
 			printk("Process %d allocated block %d of table %d\n",pid,i,id);
 		}
 
-		switch_table(pid);
+		tlb_invalidate_all();
+		/* Flush l1-icache */
+		icache_invalidate_all();
+		/* Flush l1-dcache */
+		disable_l1_dcache();
 	}
 
 	else {
@@ -277,7 +281,11 @@ void setTableEntry(uint32_t pid, uint32_t address, uint32_t numBytes, int usersp
 			printk("Process %d allocated kernel block %d of table %d\n",pid,i,id);
 		}
 
-		switch_table(pid);
+		tlb_invalidate_all();
+		/* Flush l1-icache */
+		icache_invalidate_all();
+		/* Flush l1-dcache */
+		disable_l1_dcache();
 	}
 }
 
@@ -630,8 +638,6 @@ void flush_dcache(uint32_t start_addr, uint32_t end_addr) {
 
 void switch_table(unsigned int pid) {
 
-	printk("Switching tables to table of pid: %d\n",pid);
-
 	tlb_invalidate_all();
 	/* Flush l1-icache */
 	icache_invalidate_all();
@@ -646,8 +652,9 @@ void switch_table(unsigned int pid) {
 	asm volatile("dsb");	/* barrier */
 	asm volatile("isb");	/* barrier */
 
-
 	reg=(uint32_t)getPageTable(pid);
+	printk("Process %d switching table to table with id: %d\n",pid,reg);
+	reg=(uint32_t)page_table[reg];
 	reg|=0x6a;		// 0110 1010
 				// IRGN = 10 : inner write-through cache
 				// NOS = 1 : inner sharable
@@ -659,7 +666,7 @@ void switch_table(unsigned int pid) {
 	/* See B.4.1.130 on page 1707 */
 	/* SCTLR, VMSA: System Control Register */
 	/* Enable the MMU by setting the M bit (bit 1) */
-	asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");\
+	asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
 	reg|=SCTLR_MMU_ENABLE;
 
 /* Enable caches!  Doesn't quite work */
@@ -671,4 +678,6 @@ void switch_table(unsigned int pid) {
 
 	asm volatile("dsb");	/* barrier */
 	asm volatile("isb");	/* barrier */
+
+	printk("Here\n");
 }

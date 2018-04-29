@@ -23,9 +23,6 @@ static int exec_summary_debug=1;
 
 int32_t execve(const char *filename, char *const argv[], char *const envp[]) {
 
-	// Switch the TLB
-	switch_table(current_process->pid);
-
 	int result,i;
 	int32_t inode;
 	struct stat stat_info;
@@ -41,6 +38,9 @@ int32_t execve(const char *filename, char *const argv[], char *const envp[]) {
 
 
 	if (exec_debug) printk("Entering execve\n");
+
+	// Switch the TLB
+	switch_table(current_process->pid);
 
 	inode=get_inode(filename);
 	if (inode<0) {

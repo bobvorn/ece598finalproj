@@ -160,12 +160,8 @@ void *memory_allocate(uint32_t size) {
 	/* clear memory to zero, both for bss and also security reasons */
 	memset((void *)(first_chunk*CHUNK_SIZE),0,num_chunks*CHUNK_SIZE);
 
-	if(current_process->pid > 0)
-		user = 1;
-	else
-		user = 0;
-
-	setTableEntry(current_process->pid, first_chunk*CHUNK_SIZE, size, user);
+	if(current_process)
+		setTableEntry(current_process->pid, first_chunk*CHUNK_SIZE, size, 1 /* User mode */);
 	if (memory_debug) {
 		printk("MEM: Allocated %d bytes at %x\n",
 			size,first_chunk*CHUNK_SIZE);
