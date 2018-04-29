@@ -180,7 +180,7 @@ void __attribute__((interrupt("ABORT"))) prefetch_abort_handler(void) {
 	printk("Memory is owned by %d\n", pid_memory_map[chunk]);
 
 	//asm volatile("mrc p15, 0, %0, c6, c0, 2" : "=r" (ifar) : : "cc");
-	//exit(-1);
+	exit(-1);
 
 }
 

@@ -557,6 +557,16 @@ void flush_dcache(uint32_t start_addr, uint32_t end_addr) {
 void switch_table(void) {
 
 	printk("EARLIER PIECE OF SHIT");
+
+	if (mmu_debug) printk("\tInvalidating TLB\n");
+	tlb_invalidate_all();
+	/* Flush l1-icache */
+	if (mmu_debug) printk("\tInvalidating icache\n");
+	icache_invalidate_all();
+	/* Flush l1-dcache */
+	if (mmu_debug) printk("\tInvalidating dcache\n");
+	disable_l1_dcache();
+
 	uint32_t reg=0;
 
 
@@ -599,8 +609,8 @@ void switch_table(void) {
 		/* Low bits are various config options, we leave them at 0 */
 		/* FIXME: might need to do something if SMP support added */
 		if (mmu_debug) {
-			printk("\tSetting page table to %x\n",page_table);
-			printk("\tPTE[0] = %x\n",page_table[0]);
+			printk("\tSetting page table to %x\n",page_table2);
+			printk("\tPTE[0] = %x\n",page_table2[0]);
 		}
 
 		reg=(uint32_t)page_table2;
