@@ -205,10 +205,10 @@ int32_t execve(const char *filename, char *const argv[], char *const envp[]) {
 	/* Make r1=argv */
 	current_process->user_state.r[1]=(long)argv_location;
 
-        /* Setup the entry point */
-        current_process->user_state.pc=(long)binary_start;
-        current_process->text=binary_start;
-        current_process->textsize=size;
+	/* Setup the entry point */
+	current_process->user_state.pc=(long)binary_start;
+	current_process->text=binary_start;
+	current_process->textsize=size;
 
 	/* Flush icache, as we have changed executable code */
 	/* so the various caches might be out of date */

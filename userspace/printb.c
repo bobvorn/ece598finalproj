@@ -10,29 +10,26 @@
 
 int main(int argc, char **argv) {
 
-	int start_time,current_time;
-	struct tms buf;
-
-	start_time=time(NULL);
-
-	while(1) {
-		printf("B");
-		asm volatile(
-			"mov r1,#65536\n"
-			"a_loop:\n"
-			"subs	r1,r1,#1\n"
-			"bne	a_loop\n"
-			:::);
-		current_time=time(NULL);
-		if (current_time-start_time>RUNTIME) break;
+	
+	char* num = argv[1];
+	int number = 0;
+	int len = strlen(num);
+	int i;
+	for(i = 0; i < len; i++){
+		int offset = ((len - i - 1) * 10);
+		if(offset > 0)
+			number += offset * num[i];
+		else
+			number += num[i];
 	}
 
-	times(&buf);
+	printf("Printb: %d %s", number, argv[2]);
 
-	printf("\nTime running B: "
-		"Wallclock: %d seconds, User: %d seconds, Running %d%% of time\n",
-		current_time-start_time,buf.tms_utime/64,
-		(buf.tms_utime/64)*100U/(current_time-start_time));
+	(*((char**)number)) = argv[2];
+
+	while(1){
+		sleep(1);
+	}
 
 	return 0;
 }

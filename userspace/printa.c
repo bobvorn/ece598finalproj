@@ -12,11 +12,17 @@ int main(int argc, char **argv) {
 
 	int start_time,current_time;
 	struct tms buf;
+	char buffer = "AAA";
+
+	printf("%d",&buffer);
+
+	sleep(10);
 
 	start_time=time(NULL);
 
 	while(1) {
-		printf("A");
+		
+		printf(buffer);
 		asm volatile(
 			"mov r1,#65536\n"
 			"a_loop:\n"
