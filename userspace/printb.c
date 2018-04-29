@@ -11,35 +11,6 @@
 
 int main(int argc, char **argv) {
 
-<<<<<<< HEAD
-    int start_time,current_time;
-    struct tms buf;
-
-    start_time=time(NULL);
-
-		/*
-    while(1) {
-        printf("B");
-        asm volatile(
-            "mov r1,#65536\n"
-            "a_loop:\n"
-            "subs   r1,r1,#1\n"
-            "bne    a_loop\n"
-            :::);
-        current_time=time(NULL);
-        if (current_time-start_time>RUNTIME) break;
-    }
-		*/
-
-    times(&buf);
-
-    printf("\nTime running B: "
-        "Wallclock: %d seconds, User: %d seconds, Running %d%% of time\n",
-        current_time-start_time,buf.tms_utime/64,
-        (buf.tms_utime/64)*100U/(current_time-start_time));
-
-    return 0;
-=======
 	printf("Printb arguments: %s %s %s\n",argv[0],argv[1],argv[2]);
 	
 	char* num = argv[1];
@@ -64,5 +35,4 @@ int main(int argc, char **argv) {
 	sleep(20);
 
 	return 0;
->>>>>>> d06012813016bc93c5dce2dc3a5f882903ae6156
 }

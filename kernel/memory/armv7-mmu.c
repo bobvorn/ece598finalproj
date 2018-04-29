@@ -187,8 +187,7 @@ This is: not-secure, shareable, domain 0, and the rest as described.
 */
 
 #define SECTION_KERNEL	0x9040e		// shared, root-only, cached
-#define SECTION_USER	0x9040e		// shared, any-access, cached
-#define SECTION_USER2	0x90c0e		// shared, any-access, cached
+#define SECTION_USER	0x90c0e		// shared, any-access, cached
 #define SECTION_1GB	0x90416		// root-only, non-cached
 //92c10 = 1001 0010 1100 0001 0000
 #define SECTION_2GB	0x92c10		// root-only, non-cached
@@ -248,7 +247,7 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 
 	/* Enable cachable and readable by all for rest of RAM */
 	for (i = (kernel_end >> 20); i < mem_end >> 20; i++) {
-		page_table[i] = i << 20 | SECTION_USER2;
+		page_table[i] = i << 20 | SECTION_USER;
 	}
 	if (mmu_debug) {
 		printk("\tSetting cachable+any for %x to %x, "
@@ -271,7 +270,6 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 	/* First set some default values for all */
 	for (i = 0; i < NUM_PAGE_TABLE_ENTRIES; i++) {
 		page_table2[i] = i << 20 | SECTION_DEFAULT;
-
 	}
 
 	/* Enable supervisor only and cachable for kernel */
@@ -280,7 +278,7 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 	}
 
 	for (i = (kernel_end >> 20); i < mem_end >> 20; i++) {
-		page_table2[i] = i << 20 | SECTION_USER;
+		page_table2[i] = i << 20 | SECTION_KERNEL;
 	}
 
 	for (i = 0x40000000 >> 20; i < 0x80000000 >> 20; i++) {
