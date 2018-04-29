@@ -12,9 +12,9 @@ int main(int argc, char **argv) {
 
 	int start_time,current_time;
 	struct tms buf;
-	char buffer = "AAA";
+	char* buffer = "ABCDEFG";
 
-	printf("%d",&buffer);
+	printf("Address: %d\n",buffer);
 
 	sleep(10);
 
