@@ -409,32 +409,34 @@ void process_save(struct process_control_block_type *proc, uint32_t new_stack) {
 int32_t process_switch(struct process_control_block_type *old,
 			struct process_control_block_type *new) {
 
-        /* Save current state to PCB */
-        asm(
-                "mov    r2, %[save]\n"
-                "stmia  r2,{r0-lr}\n"   //Save all registers r0-lr
-                "add    r2,r2,#60\n"
-                "mrs    r0, SPSR\n"     //  load SPSR
-                "stmia  r2,{r0}\n"      // store
-                : /* output */
-                : [save] "r"(&(old->kernel_state.r[0]))/* input */
-                : /* clobbers */
-        );
+	/* Save current state to PCB */
+	asm(
+			"mov    r2, %[save]\n"
+			"stmia  r2,{r0-lr}\n"   //Save all registers r0-lr
+			"add    r2,r2,#60\n"
+			"mrs    r0, SPSR\n"     //  load SPSR
+			"stmia  r2,{r0}\n"      // store
+			: /* output */
+			: [save] "r"(&(old->kernel_state.r[0]))/* input */
+			: /* clobbers */
+	);
 
 	current_process=new;
 
-        /* Restore current state from PCB */
-        asm(
-                "mov    r2, %[restore]\n"
-		"ldr	r0,[r2,#60]\n"
-		"msr	SPSR, r0\n"		// restore SPSR
-                "ldmia	r2,{r0-r14}\n"	// restore registers
-                "mov	pc,lr\n"	// return, restoring SPSR
-                : /* output */
-                : [restore] "r"(&(new->kernel_state.r[0]))
-		/* input */
-                : /* clobbers */
-        );
+	switch_table(new->pid);
+
+	/* Restore current state from PCB */
+	asm(
+			"mov    r2, %[restore]\n"
+	"ldr	r0,[r2,#60]\n"
+	"msr	SPSR, r0\n"		// restore SPSR
+			"ldmia	r2,{r0-r14}\n"	// restore registers
+			"mov	pc,lr\n"	// return, restoring SPSR
+			: /* output */
+			: [restore] "r"(&(new->kernel_state.r[0]))
+	/* input */
+			: /* clobbers */
+	);
 
 	return 0;
 }

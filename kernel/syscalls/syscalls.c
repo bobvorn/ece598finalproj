@@ -207,7 +207,6 @@ uint32_t swi_handler_c(
 
 		case SYSCALL_GRADIENT:
 			result=framebuffer_gradient();
-			 switch_table();
 			 printk("PIECE OF SHIT\n");
 
 			break;

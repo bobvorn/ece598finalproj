@@ -16,8 +16,6 @@
 #include "lib/printk.h"
 #include "arch/armv7/armv7-mmu.h"
 
-void switch_table(void);
-
 static int mmu_debug=1;
 
 static void tlb_invalidate_all(void) {
@@ -153,12 +151,21 @@ void invalidate_l1_dcache(void) {
 /* We want to cover all 4GB of address space	*/
 /* Using 1MB pages, so need 4096 entries	*/
 #define NUM_PAGE_TABLE_ENTRIES 4096
+#define NUM_PAGE_TABLES 1
 
 /* make sure properly aligned, as the low bits are reserved  */
 /* This means we need 14-bit (16k) allignment */
 
 uint32_t  __attribute__((aligned(16384))) page_table[NUM_PAGE_TABLE_ENTRIES];
-uint32_t  __attribute__((aligned(16384))) page_table2[NUM_PAGE_TABLE_ENTRIES];
+//uint32_t  __attribute__((aligned(16384))) page_table2[NUM_PAGE_TABLE_ENTRIES];
+//uint32_t  __attribute__((aligned(16384))) page_table3[NUM_PAGE_TABLE_ENTRIES];
+//uint32_t  __attribute__((aligned(16384))) page_table4[NUM_PAGE_TABLE_ENTRIES];
+//uint32_t* page_table[NUM_PAGE_TABLES] = {
+//	page_table1,
+	//page_table2,
+	//page_table3,
+	//page_table4
+//};
 
 /* We want a 1MB coarse page table descriptor */
 /* B.3.5.1, p1326 */
@@ -200,7 +207,7 @@ This is: not-secure, shareable, domain 0, and the rest as described.
 /* Enable a one-to-one physical to virtual mapping using 1MB pagetables */
 void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 
-	int i;
+	int i,j;
 	uint32_t reg;
 
 	/* Set up an identity-mapping for all 4GB */
@@ -229,13 +236,15 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 
 	/* First set some default values for all */
 	for (i = 0; i < NUM_PAGE_TABLE_ENTRIES; i++) {
-		page_table[i] = i << 20 | SECTION_DEFAULT;
+		//for(j = 0; j < NUM_PAGE_TABLES; j++)
+			page_table[i] = i << 20 | SECTION_DEFAULT;
 
 	}
 
 	/* Enable supervisor only and cachable for kernel */
 	for (i = (mem_start >> 20); i < (kernel_end >> 20); i++) {
-		page_table[i] = i << 20 | SECTION_KERNEL;
+		//for(j = 0; j < NUM_PAGE_TABLES; j++)
+			page_table[i] = i << 20 | SECTION_KERNEL;
 	}
 	if (mmu_debug) {
 		printk("\tSetting cachable+kernel only for %x to %x, "
@@ -245,9 +254,23 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 			kernel_end&0xfff00000);
 	}
 
+	printk("\tKernel ends at chunk: %d\n",(kernel_end >> 20));
+
 	/* Enable cachable and readable by all for rest of RAM */
+	// Kernel ends at 13
 	for (i = (kernel_end >> 20); i < mem_end >> 20; i++) {
-		page_table[i] = i << 20 | SECTION_USER;
+		//for(j = 0; j < NUM_PAGE_TABLES; j++){
+			// Split memory into 16 MB chunks. Each program can have maximum 2 MB memory
+			// Subtract the start of the kernel so each program actually gets 16 MB
+			//if((i - (kernel_end >> 20)) / 16 == j)
+				page_table[i] = i << 20 | SECTION_USER;
+			//else
+				//page_table[j][i] = i << 20 | SECTION_KERNEL;
+				//page_table[j][i] = i << 20 | SECTION_USER;
+
+			//if((i - (kernel_end >> 20)) / 16 == 1)
+				//page_table[j][i] = i << 20 | SECTION_USER;
+		//}
 	}
 	if (mmu_debug) {
 		printk("\tSetting cachable+any for %x to %x, "
@@ -259,38 +282,15 @@ void enable_mmu(uint32_t mem_start, uint32_t mem_end, uint32_t kernel_end) {
 
 	/* Set from 1GB-2GB */
 	for (i = 0x40000000 >> 20; i < 0x80000000 >> 20; i++) {
-		page_table[i] = i << 20 | SECTION_1GB;
+		//for(j = 0; j < NUM_PAGE_TABLES; j++)
+			page_table[i] = i << 20 | SECTION_1GB;
 	}
 
 	/* Set from 2GB-4GB */
 	for (i = 0x40000000 >> 20; i < 0x80000000 >> 20; i++) {
-		page_table[i] = i << 20 | SECTION_2GB;
+		//for(j = 0; j < NUM_PAGE_TABLES; j++)
+			page_table[i] = i << 20 | SECTION_2GB;
 	}
-
-	/* First set some default values for all */
-	for (i = 0; i < NUM_PAGE_TABLE_ENTRIES; i++) {
-		page_table2[i] = i << 20 | SECTION_DEFAULT;
-	}
-
-	/* Enable supervisor only and cachable for kernel */
-	for (i = (mem_start >> 20); i < (kernel_end >> 20); i++) {
-		page_table2[i] = i << 20 | SECTION_KERNEL;
-	}
-
-	for (i = (kernel_end >> 20); i < mem_end >> 20; i++) {
-		page_table2[i] = i << 20 | SECTION_KERNEL;
-	}
-
-	for (i = 0x40000000 >> 20; i < 0x80000000 >> 20; i++) {
-		page_table2[i] = i << 20 | SECTION_1GB;
-	}
-
-	/* Set from 2GB-4GB */
-	for (i = 0x40000000 >> 20; i < 0x80000000 >> 20; i++) {
-		page_table2[i] = i << 20 | SECTION_2GB;
-	}
-
-
 
 
 
@@ -554,104 +554,65 @@ void flush_dcache(uint32_t start_addr, uint32_t end_addr) {
 
 }
 
-void switch_table(void) {
+void switch_table(uint32_t pid) {
 
-	printk("EARLIER PIECE OF SHIT");
+	//printk("Switching tables to PID: %d\n",pid);
 
-	if (mmu_debug) printk("\tInvalidating TLB\n");
+	//if(pid == 0)
+		return; // Idle task
+
 	tlb_invalidate_all();
-	/* Flush l1-icache */
-	if (mmu_debug) printk("\tInvalidating icache\n");
-	icache_invalidate_all();
-	/* Flush l1-dcache */
-	if (mmu_debug) printk("\tInvalidating dcache\n");
-	disable_l1_dcache();
+	//icache_invalidate_all();
+	//disable_l1_dcache();
 
 	uint32_t reg=0;
 
+	/* TTBCR : Translation Table Base Control Register */
+	/* B3.5.4 (1330) */
+	/* Choice of using TTBR0 (user) vs TTBR1 (kernel) */
+	/* This is based on address range, also TTBCR.N */
+	/* N is bottom 3 bits, if 000 then TTBR1 not used */
+	/* We set N to 0, meaning only use TTBR0 */
+	asm volatile("mrc p15, 0, %0, c2, c0, 2" : "=r" (reg) : : "cc");
+	reg=0;
+	asm volatile("mcr p15, 0, %0, c2, c0, 2" : : "r" (reg) : "cc");
 
+	/* See B.4.1.43 */
+	/* DACR: Domain Access Control Register */
+	/* All domains, set manager access (no faults for accesses) */
+	reg=0x55555555;	// all domains, client access
+	asm volatile("mcr p15, 0, %0, c3, c0, 0" : : "r" (reg): "cc");
+
+	/* Initialize SCTLR.AFE */
+	/* This boots with value 0, but set to 0 anyway */
+	asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
+	reg&=~SCTLR_ACCESS_FLAG_ENABLE;
+	asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r" (reg) : "cc");
+
+	reg=(uint32_t)page_table;
+	reg|=0x6a;		// 0110 1010
+				// IRGN = 10 : inner write-through cache
+				// NOS = 1 : inner sharable
+				// RGN = 01 : normal mem, outer writeback/allocate
+				// S = 1 : sharable
+	asm volatile("mcr p15, 0, %0, c2, c0, 0"
+		: : "r" (reg) : "memory");
+
+		/* See B.4.1.130 on page 1707 */
+	/* SCTLR, VMSA: System Control Register */
+	/* Enable the MMU by setting the M bit (bit 1) */
+	asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
+	reg|=SCTLR_MMU_ENABLE;
+
+/* Enable caches!  Doesn't quite work */
+#if 1
+	reg|=SCTLR_CACHE_ENABLE;
+	reg|=SCTLR_ICACHE_ENABLE;
+#endif
 	asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r" (reg) : "cc");
 
 	asm volatile("dsb");	/* barrier */
 	asm volatile("isb");	/* barrier */
 
-		/* TTBCR : Translation Table Base Control Register */
-		/* B3.5.4 (1330) */
-		/* Choice of using TTBR0 (user) vs TTBR1 (kernel) */
-		/* This is based on address range, also TTBCR.N */
-		/* N is bottom 3 bits, if 000 then TTBR1 not used */
-		/* We set N to 0, meaning only use TTBR0 */
-		asm volatile("mrc p15, 0, %0, c2, c0, 2" : "=r" (reg) : : "cc");
-		if (mmu_debug) printk("\tTTBCR before = %x\n",reg);
-		reg=0;
-		asm volatile("mcr p15, 0, %0, c2, c0, 2" : : "r" (reg) : "cc");
-
-		/* See B.4.1.43 */
-		/* DACR: Domain Access Control Register */
-		/* All domains, set manager access (no faults for accesses) */
-		if (mmu_debug) printk("\tInitialize DACR\n");
-		reg=0x55555555;	// all domains, client access
-		asm volatile("mcr p15, 0, %0, c3, c0, 0" : : "r" (reg): "cc");
-
-		/* Initialize SCTLR.AFE */
-		/* This boots with value 0, but set to 0 anyway */
-		if (mmu_debug) printk("\tInitialize SCTLR.AFE\n");
-		asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
-		if (mmu_debug) printk("\tSCTLR before AFE = %x\n",reg);
-		reg&=~SCTLR_ACCESS_FLAG_ENABLE;
-		asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r" (reg) : "cc");
-
-		/* TTBR0 (VMSA): Translation Table Base Register 0 */
-		/* See B.4.1.154 (page 1729) */
-		/* This is the userspace pagetable, can be per-process */
-
-		/* Bits 31-N are the address of the table */
-		/* Low bits are various config options, we leave them at 0 */
-		/* FIXME: might need to do something if SMP support added */
-		if (mmu_debug) {
-			printk("\tSetting page table to %x\n",page_table2);
-			printk("\tPTE[0] = %x\n",page_table2[0]);
-		}
-
-		reg=(uint32_t)page_table2;
-		reg|=0x6a;		// 0110 1010
-					// IRGN = 10 : inner write-through cache
-					// NOS = 1 : inner sharable
-					// RGN = 01 : normal mem, outer writeback/allocate
-					// S = 1 : sharable
-		asm volatile("mcr p15, 0, %0, c2, c0, 0"
-			: : "r" (reg) : "memory");
-
-	#if 0
-		/* SMP is implemented in the CPUECTLR register on armv8? */
-		uint32_t reg2;
-
-		if (mmu_debug) printk("Enabling SMPEN\n");
-		asm volatile("mrrc p15, 1, %0, %1, c15" :  "=r" (reg), "=r"(reg2):: "cc");
-		reg|=(1<<6);	// Set SMPEN.
-		asm volatile("mcrr p15, 1, %0, %1, c15" : : "r" (reg), "r"(reg2):"cc");
-	#endif
-
-
-		/* See B.4.1.130 on page 1707 */
-		/* SCTLR, VMSA: System Control Register */
-		/* Enable the MMU by setting the M bit (bit 1) */
-		asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
-		if (mmu_debug) printk("\tSCTLR before = %x\n",reg);
-		reg|=SCTLR_MMU_ENABLE;
-
-	/* Enable caches!  Doesn't quite work */
-	#if 1
-		reg|=SCTLR_CACHE_ENABLE;
-		reg|=SCTLR_ICACHE_ENABLE;
-	#endif
-		asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r" (reg) : "cc");
-
-		asm volatile("dsb");	/* barrier */
-		asm volatile("isb");	/* barrier */
-
-		asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
-		if (mmu_debug) printk("\tSCTLR after = %x\n",reg);
-
-
+	asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r" (reg) : : "cc");
 }

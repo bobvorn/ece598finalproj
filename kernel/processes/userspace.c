@@ -55,6 +55,9 @@ void start_userspace(char *init_filename) {
 	/* Mark idle and init as ready */
 	init_process->status=PROCESS_STATUS_READY;
 
+	// Set the TLB
+	switch_table(init_process->pid);
+
 	long *shell_stack=(long *)init_process->user_state.r[13];
 
 	asm volatile(

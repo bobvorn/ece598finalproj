@@ -11,6 +11,9 @@
 
 #define MAX_MEMORY	(1024*1024*1024)		// 1GB
 #define CHUNK_SIZE	4096
+#define CHUNKS_PER_TLB_PAGE ((PAGE_TABLE_SIZE)/CHUNK_SIZE)
+#define CHUNKS_PER_TLB (CHUNKS_PER_TLB_PAGE*NUM_PAGE_TABLE_ENTRIES_PER_PROGRAM)
+#define PROGRAM_START_OFFSET (CHUNKS_PER_TLB_PAGE*KERNEL_PAGE_END)
 
 static int memory_debug=1;
 
@@ -95,14 +98,31 @@ static int memory_init(unsigned long memory_total,unsigned long memory_kernel) {
 static int find_free(int num_chunks) {
 
 	int i,j;
-	pid = current_process->pid;
-	for(i=0;i<max_chunk;i++) {
-		if (!memory_test_used(i)) {
-			for(j=0;j<num_chunks;j++) {
-				if (memory_test_used(i+j)) break;
+	if(0 && current_process){
+		pid = current_process->pid;
+		
+		int startChunk = CHUNKS_PER_TLB*pid+PROGRAM_START_OFFSET;
+		int endChunk = CHUNKS_PER_TLB*pid+CHUNKS_PER_TLB+PROGRAM_START_OFFSET;
+		//printk("\tFINDING MEMORY. PID: %d, Start: %d, End: %d, Num Chunks: %d\n",pid,startChunk / CHUNKS_PER_TLB_PAGE,endChunk / CHUNKS_PER_TLB_PAGE,num_chunks);
+		for(i=startChunk;i<endChunk;i++) {
+			if (!memory_test_used(i)) {
+				for(j=0;j<num_chunks;j++) {
+					if (memory_test_used(i+j)) break;
+				}
+				if (j==num_chunks) {
+					return i;
+				}
 			}
-			if (j==num_chunks) {
-				return i;
+		}
+	} else {
+		for(i=0;i<max_chunk;i++) {
+			if (!memory_test_used(i)) {
+				for(j=0;j<num_chunks;j++) {
+					if (memory_test_used(i+j)) break;
+				}
+				if (j==num_chunks) {
+					return i;
+				}
 			}
 		}
 	}

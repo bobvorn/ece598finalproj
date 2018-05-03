@@ -145,12 +145,14 @@ void __attribute__((interrupt("ABORT"))) data_abort_handler(void) {
 	if (fs==2) printk("\tDebug event\n");
 	if ((fs&0xd)==0xd) printk("\tPermission fault accessing %x\n",dfar);
 
-	printk("Process currently running is %d\n", current_process->pid);
+	printk("\tTLB chunk attempted to access is: %d\n",dfar / (1024*1024));
+
+	printk("\tProcess currently running is %d\n", current_process->pid);
 
 	chunk = dfar/4096;
 	bit = chunk%32;
 	chunk = chunk + bit;
-	printk("Memory is owned by %d\n", pid_memory_map[chunk]);
+	printk("\tMemory is owned by %d\n", pid_memory_map[chunk]);
 
 	exit(-1);
 
@@ -174,10 +176,14 @@ void __attribute__((interrupt("ABORT"))) prefetch_abort_handler(void) {
 	if (fs==2) printk("\tDebug event\n");
 	if ((fs&0xd)==0xd) printk("\tPermission fault accessing %x\n",ifar);
 
+	printk("\tTLB chunk attempted to access is: %d\n",ifar / (1024*1024));
+
+	printk("\tProcess currently running is %d\n", current_process->pid);
+
 	chunk = ifar/4096;
 	bit = chunk%32;
 	chunk = chunk + bit;
-	printk("Memory is owned by %d\n", pid_memory_map[chunk]);
+	printk("\tMemory is owned by %d\n", pid_memory_map[chunk]);
 
 	//asm volatile("mrc p15, 0, %0, c6, c0, 2" : "=r" (ifar) : : "cc");
 	exit(-1);

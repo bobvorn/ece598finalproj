@@ -8,4 +8,8 @@ void disable_branch_predictor(void);
 
 void flush_icache(void);
 void flush_dcache(uint32_t start_addr, uint32_t end_addr);
-void switch_table(void);
+void switch_table(uint32_t pid);
+
+#define PAGE_TABLE_SIZE 1024*1024
+#define NUM_PAGE_TABLE_ENTRIES_PER_PROGRAM 16
+#define KERNEL_PAGE_END 13
