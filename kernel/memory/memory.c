@@ -12,7 +12,7 @@
 #define MAX_MEMORY	(1024*1024*1024)		// 1GB
 #define CHUNK_SIZE	4096
 
-static int memory_debug=0;
+static int memory_debug=1;
 
 static unsigned int memory_total;
 
